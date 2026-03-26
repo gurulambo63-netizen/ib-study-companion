@@ -123,28 +123,35 @@ function formatPaperContent(content: string): string {
   // Convert markdown-ish content to HTML
   let html = content;
 
-  // Headers for sections
-  html = html.replace(/^### (.*)/gm, '<h3 class="text-lg font-bold mt-8 mb-3 border-b border-border pb-1">$1</h3>');
-  html = html.replace(/^## (.*)/gm, '<h2 class="text-xl font-bold mt-10 mb-4">$1</h2>');
+  // Sections
+  html = html.replace(/^### (.*)/gm, '<h3 class="text-lg font-bold mt-12 mb-4 border-b-2 border-primary/20 pb-2 uppercase tracking-wide text-primary/80">$1</h3>');
+  html = html.replace(/^## (.*)/gm, '<h2 class="text-2xl font-black mt-16 mb-6 border-b-4 border-primary pb-2 uppercase tracking-tight">$1</h2>');
 
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  // Question numbers with marks
-  html = html.replace(/^(\d+)\.\s/gm, '<div class="mt-6"><span class="font-bold">$1.</span> ');
+  // Question numbers (1., 2. etc)
+  html = html.replace(/^(\d+)\.\s/gm, '<div class="mt-10 first:mt-4 group"><div class="flex items-baseline gap-4"><span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-black text-sm">$1</span><div class="flex-grow font-semibold text-lg">');
+  
+  // Close the question div if next line starts or end of string
+  // This is a bit tricky with simple regex, but let's try to wrap it better
+  
+  // Marks in brackets [X] or [X marks]
+  html = html.replace(/\[(\d+)\]/g, '<span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary ml-2 align-middle">[$1]</span>');
+  html = html.replace(/\[(\d+)\s*marks?\]/gi, '<span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary ml-2 align-middle">[$1]</span>');
 
-  // Marks in brackets
-  html = html.replace(/\[(\d+)\s*marks?\]/gi, '<span class="float-right text-xs font-medium text-muted-foreground border border-border rounded px-2 py-0.5">[$1 marks]</span>');
+  // Sub-questions (a), (b)
+  html = html.replace(/^\(([a-z])\)\s/gm, '</div></div><div class="ml-12 mt-6 flex items-baseline gap-3"><span class="flex-shrink-0 font-bold text-primary italic">($1)</span> <div class="flex-grow">');
+  
+  // Sub-sub-questions (i), (ii)
+  html = html.replace(/^\(([ivx]+)\)\s/gm, '</div><div class="ml-12 mt-4 flex items-baseline gap-3"><span class="flex-shrink-0 font-medium text-muted-foreground">($1)</span> <div class="flex-grow text-sm">');
 
-  // Sub-questions
-  html = html.replace(/^\(([a-z])\)\s/gm, '<div class="ml-6 mt-3"><span class="font-medium">($1)</span> ');
+  // Diagrams/Graph placeholders
+  html = html.replace(/\[(DIAGRAM|GRAPH):?\s*(.*?)\]/gi, '<div class="my-8 p-12 border-2 border-dashed border-primary/20 rounded-2xl text-center bg-primary/5 group-hover:bg-primary/10 transition-colors"><div class="flex flex-col items-center gap-3"><svg class="w-12 h-12 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p class="text-xs font-bold uppercase tracking-widest text-primary/60">$1: $2</p></div></div>');
 
-  // Line breaks
-  html = html.replace(/\n\n/g, '</div><div class="mt-2">');
+  // Clean up line breaks
+  html = html.replace(/\n\n/g, '</div><div class="mt-4">');
   html = html.replace(/\n/g, '<br/>');
 
-  // Graph placeholders
-  html = html.replace(/\[GRAPH:?\s*(.*?)\]/gi, '<div class="my-4 p-6 border-2 border-dashed border-border rounded-lg text-center text-muted-foreground bg-muted/20"><p class="text-sm">📊 Graph: $1</p></div>');
-
-  return `<div>${html}</div>`;
+  return `<div class="paper-content-container">${html}</div>`;
 }

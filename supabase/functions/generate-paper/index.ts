@@ -20,19 +20,43 @@ serve(async (req) => {
     }[difficulty] || "medium difficulty questions";
 
     const modePrompt = mode === "past-paper"
-      ? `Generate a full IB-style exam paper for ${subject}. Format it exactly like a real IB exam paper with proper sections.
-Include:
-- Section A: Multiple choice or short answer questions (if applicable)
-- Section B: Extended response questions
-- Each question should show marks in [X marks] format
-- Use proper mathematical notation with $ for inline and $$ for display equations
-- Include realistic data, scenarios, and contexts
-- Total marks should be around 80-110
-- Include approximately 8-12 questions across sections
-- For math/science, include equations and calculations
-- Use [GRAPH: description] placeholder where graphs would appear`
-      : `Generate a quick quiz with 10 multiple-choice questions for ${subject}. Each question should have 4 options (A-D) with the correct answer marked.`;
-
+      ? `Generate a high-quality IB-style practice paper that is visually clean, well-structured, and aesthetically professional.
+    
+    STRUCTURE:
+    - Include a clear title at the top: Subject, Level, Topic, and Paper number
+    - Add time allowed and total marks under the title
+    - Separate the paper into clearly labeled sections (e.g., Section A, Section B)
+    - Number all questions clearly (1, 2, 3...) and sub-parts (a), (b), (i), (ii)
+    
+    LAYOUT & SPACING:
+    - Use consistent spacing between questions
+    - Ensure each question is visually separated
+    - Align all text neatly
+    - Keep margins clean and balanced
+    
+    TYPOGRAPHY STYLE:
+    - Use simple, readable formatting
+    - Use bold ONLY for headings
+    - Use italics only where appropriate (e.g., variables, emphasis)
+    - Mathematical expressions must be clearly formatted using LaTeX ($ for inline, $$ for display)
+    
+    QUESTION DESIGN:
+    - Questions must feel authentic to IB exams
+    - Progress from easier to harder within each question
+    - Include a mix of short-response and extended-response questions
+    - Include mark allocations at the end of each question part in [X] format (e.g., [2], [5])
+    
+    VISUAL CLARITY:
+    - Avoid dense paragraphs — break text into readable chunks
+    - Use indentation for sub-parts
+    - If diagrams are needed, use [DIAGRAM: description] placeholders
+    
+    QUALITY:
+    - No vague or generic questions
+    - Ensure questions test real understanding, not just recall
+    - Maintain consistency in tone and difficulty`
+      : `Generate a quick quiz with 10 multiple-choice questions for ${subject}. Each question should have 4 options (A-D) with the correct answer marked clearly.`;
+    
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
