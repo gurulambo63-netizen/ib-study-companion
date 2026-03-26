@@ -2,9 +2,10 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Send, BookOpen } from "lucide-react";
+
+const GRADE_TOK_URL = "https://eqk9ganl--grade-tok-essay.functions.blink.new";
 
 const tokPrompts = [
   "To what extent is certainty attainable in the natural sciences?",
@@ -27,10 +28,14 @@ export default function TOKPage() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("grade-tok-essay", {
-        body: { essay, prompt: selectedPrompt },
+      const res = await fetch(GRADE_TOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ essay, prompt: selectedPrompt }),
       });
-      if (error) throw error;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       setFeedback(data.feedback);
     } catch (err) {
       console.error(err);

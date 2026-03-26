@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IB_SUBJECTS, SUBJECT_TOPICS, type PaperMode, type Difficulty, type PaperConfig } from "@/lib/ib-data";
 import { FileText, Zap, ChevronLeft, Loader2 } from "lucide-react";
 import { IBPaperView } from "@/components/IBPaperView";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+const GENERATE_PAPER_URL = "https://eqk9ganl--generate-paper.functions.blink.new";
 
 type Step = "subject" | "mode" | "topics" | "difficulty" | "generating" | "result";
 
@@ -43,16 +44,19 @@ export default function PracticePapersPage() {
     setStep("generating");
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-paper", {
-        body: {
+      const res = await fetch(GENERATE_PAPER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           subject: subjectObj?.name,
           mode,
           topics: selectedTopics,
           difficulty,
-        } satisfies PaperConfig & { subject: string },
+        }),
       });
-
-      if (error) throw error;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       setGeneratedPaper(data.paper);
       setStep("result");
     } catch (err) {
