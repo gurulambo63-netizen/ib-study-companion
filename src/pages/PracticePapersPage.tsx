@@ -7,8 +7,6 @@ import { FileText, Zap, ChevronLeft, Loader2 } from "lucide-react";
 import { IBPaperView } from "@/components/IBPaperView";
 import { toast } from "sonner";
 
-const GENERATE_PAPER_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-paper`;
-
 type Step = "subject" | "mode" | "topics" | "difficulty" | "generating" | "result";
 
 export default function PracticePapersPage() {
@@ -43,27 +41,15 @@ export default function PracticePapersPage() {
     }
     setStep("generating");
 
-    try {
-      const res = await fetch(GENERATE_PAPER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject: subjectObj?.name,
-          mode,
-          topics: selectedTopics,
-          difficulty,
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setGeneratedPaper(data.paper);
-      setStep("result");
-    } catch (err) {
-      console.error("Generation error:", err);
-      toast.error("Failed to generate paper. Please try again.");
-      setStep("difficulty");
-    }
+    // Simulate generation — replace with your own AI endpoint when ready
+    await new Promise((res) => setTimeout(res, 1500));
+    const topicList = selectedTopics.join(", ");
+    const paper = mode === "past-paper"
+      ? `## ${subjectObj?.name} — Practice Paper\n**Topics:** ${topicList}\n**Difficulty:** ${difficulty}\n\n---\n\n### Section A — Short Answer Questions\n\n**Question 1** [4 marks]\nExplain the key principles of ${selectedTopics[0]} with reference to a specific example.\n\n**Question 2** [6 marks]\nAnalyse the relationship between ${selectedTopics[0]}${selectedTopics[1] ? ` and ${selectedTopics[1]}` : ""}. Use appropriate terminology.\n\n---\n\n### Section B — Extended Response\n\n**Question 3** [10 marks]\nEvaluate the importance of ${topicList} in the context of ${subjectObj?.name}. Your answer should include worked examples, diagrams where appropriate, and a conclusion.\n\n---\n\n*This is a demo paper. Connect an AI endpoint for AI-generated questions.*`
+      : `## ${subjectObj?.name} — Quick Quiz\n**Topics:** ${topicList} · **Difficulty:** ${difficulty}\n\n---\n\n**Q1.** Which of the following best describes a key concept in ${selectedTopics[0]}?\n- A. Option one\n- B. Option two\n- C. Option three *(correct)*\n- D. Option four\n\n**Q2.** True or False: ${selectedTopics[0]} involves a direct relationship between cause and effect.\n*(Answer: True)*\n\n**Q3.** Define ${selectedTopics[0]} in your own words and give one real-world application.\n\n---\n\n*This is a demo quiz. Connect an AI endpoint for AI-generated questions.*`;
+
+    setGeneratedPaper(paper);
+    setStep("result");
   };
 
   const goBack = () => {

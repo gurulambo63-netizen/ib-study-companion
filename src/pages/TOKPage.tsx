@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, Send, BookOpen } from "lucide-react";
 
-const GRADE_TOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/grade-tok-essay`;
-
 const tokPrompts = [
   "To what extent is certainty attainable in the natural sciences?",
   "How can we distinguish between knowledge and belief?",
@@ -27,22 +25,19 @@ export default function TOKPage() {
     if (essay.trim().split(/\s+/).length < 50) { toast.error("Essay should be at least 50 words"); return; }
 
     setLoading(true);
-    try {
-      const res = await fetch(GRADE_TOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ essay, prompt: selectedPrompt }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setFeedback(data.feedback);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to grade essay. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    // Simulate AI grading — replace with your own API endpoint when ready
+    await new Promise((res) => setTimeout(res, 1200));
+    const wordCount = essay.trim().split(/\s+/).filter(Boolean).length;
+    const score = Math.min(10, Math.round(wordCount / 80) + 4);
+    setFeedback(
+      `**Overall Score: ${score}/10**\n\n` +
+      `**Criterion A – Understanding Knowledge Questions (${Math.min(10, score)}/10)**\nYour essay demonstrates a reasonable engagement with the central knowledge question. Consider deepening your exploration of the epistemic implications.\n\n` +
+      `**Criterion B – Quality of Analysis (${Math.min(10, score - 1 >= 0 ? score - 1 : score)}/10)**\nThe arguments presented are coherent. To improve, integrate more specific real-world situations and counterarguments.\n\n` +
+      `**Criterion C – Awareness of Perspectives (${Math.min(10, score)}/10)**\nMultiple perspectives are acknowledged. Strengthen the comparative analysis between areas of knowledge.\n\n` +
+      `**Suggestions for Improvement:**\n• Use more precise TOK terminology (e.g., claims vs. counterclaims)\n• Incorporate at least two contrasting areas of knowledge\n• Ensure your knowledge question is genuinely open-ended\n\n` +
+      `*(This is a demo analysis. Connect an AI endpoint for real-time feedback.)*`
+    );
+    setLoading(false);
   };
 
   return (

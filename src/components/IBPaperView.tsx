@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import type { PaperMode } from "@/lib/ib-data";
 
-const GENERATE_DIAGRAM_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-diagram`;
-
 interface IBPaperViewProps {
   content: string;
   subject: string;
@@ -30,26 +28,13 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
     return matches;
   }, []);
 
+  // Diagram generation is disabled — connect your own AI endpoint to enable it
   useEffect(() => {
     const diagrams = extractDiagramDescriptions(content);
     if (diagrams.length === 0) return;
-    diagrams.forEach(async (diagram) => {
-      if (diagramImages[diagram.key] || loadingDiagrams[diagram.key]) return;
-      setLoadingDiagrams((prev) => ({ ...prev, [diagram.key]: true }));
-      try {
-        const res = await fetch(GENERATE_DIAGRAM_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ description: diagram.description, type: diagram.type }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data.imageUrl) {
-          setDiagramImages((prev) => ({ ...prev, [diagram.key]: data.imageUrl }));
-        }
-      } catch (err) {
-        console.error("Diagram generation error:", err);
-      } finally {
+    // Diagrams will render as placeholder boxes until an AI endpoint is connected
+    diagrams.forEach((diagram) => {
+      if (!diagramImages[diagram.key]) {
         setLoadingDiagrams((prev) => ({ ...prev, [diagram.key]: false }));
       }
     });
