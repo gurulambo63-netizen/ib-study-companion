@@ -20,43 +20,62 @@ serve(async (req) => {
     }[difficulty] || "medium difficulty questions";
 
     const modePrompt = mode === "past-paper"
-      ? `Generate a high-quality IB-style practice paper that is visually clean, well-structured, and aesthetically professional.
-    
-    STRUCTURE:
-    - Include a clear title at the top: Subject, Level, Topic, and Paper number
-    - Add time allowed and total marks under the title
-    - Separate the paper into clearly labeled sections (e.g., Section A, Section B)
-    - Number all questions clearly (1, 2, 3...) and sub-parts (a), (b), (i), (ii)
-    
-    LAYOUT & SPACING:
-    - Use consistent spacing between questions
-    - Ensure each question is visually separated
-    - Align all text neatly
-    - Keep margins clean and balanced
-    
-    TYPOGRAPHY STYLE:
-    - Use simple, readable formatting
-    - Use bold ONLY for headings
-    - Use italics only where appropriate (e.g., variables, emphasis)
-    - Mathematical expressions must be clearly formatted using LaTeX ($ for inline, $$ for display)
-    
-    QUESTION DESIGN:
-    - Questions must feel authentic to IB exams
-    - Progress from easier to harder within each question
-    - Include a mix of short-response and extended-response questions
-    - Include mark allocations at the end of each question part in [X] format (e.g., [2], [5])
-    
-    VISUAL CLARITY:
-    - Avoid dense paragraphs — break text into readable chunks
-    - Use indentation for sub-parts
-    - If diagrams are needed, use [DIAGRAM: description] placeholders
-    
-    QUALITY:
-    - No vague or generic questions
-    - Ensure questions test real understanding, not just recall
-    - Maintain consistency in tone and difficulty`
-      : `Generate a quick quiz with 10 multiple-choice questions for ${subject}. Each question should have 4 options (A-D) with the correct answer marked clearly.`;
-    
+      ? `You are generating an IB examination paper. Output ONLY the questions in clean markdown. Do NOT include any title, header, time, marks total, or instructions — those are added by the app.
+
+FORMAT RULES (follow exactly):
+- Use "## Section A" and "## Section B" for section headers (only these two levels)
+- Number questions as "1. ", "2. ", etc. at the START of a line
+- Sub-parts on their OWN line: "(a) ", "(b) ", "(c) "
+- Sub-sub-parts on their OWN line: "(i) ", "(ii) ", "(iii) "
+- Mark allocation at the END of each part: [2], [4], [6] — just the number in brackets
+- Leave a blank line between every question, every sub-part
+- Use $...$ for inline math and $$...$$ for display math (LaTeX)
+- Use \\frac{a}{b} for fractions, x^{2} for powers, \\sqrt{x} for roots
+- Use \\int, \\sum, \\lim, \\sin, \\cos, \\tan, \\log, \\ln for functions
+- For diagrams write [DIAGRAM: precise description] on its own line
+- For graphs write [GRAPH: precise description] on its own line
+- Do NOT use bold (**) in question text
+- Do NOT use bullet points or lists inside questions
+- Each question should have 2-4 sub-parts progressing in difficulty
+- Total paper should have 6-8 questions
+
+EXAMPLE FORMAT:
+## Section A
+
+1. Consider the function $f(x) = 2x^3 - 5x + 1$.
+
+(a) Find $f'(x)$. [2]
+
+(b) Determine the coordinates of any stationary points. [4]
+
+(c) Classify each stationary point as a local maximum or minimum. Justify your answer. [3]
+
+## Section B
+
+5. A particle moves along a straight line with velocity $v(t) = 3t^2 - 12t + 9$ m/s.
+
+(a) Find the acceleration of the particle at time $t = 2$ seconds. [3]
+
+(b) Calculate the total distance travelled by the particle in the first 4 seconds. [5]
+
+[DIAGRAM: A velocity-time graph showing v(t) = 3t^2 - 12t + 9 for 0 ≤ t ≤ 4]
+
+(c) Determine when the particle changes direction. [3]`
+      : `Generate a quiz with exactly 10 multiple-choice questions for ${subject}. Format each as:
+
+1. Question text here
+
+A) Option one
+B) Option two
+C) Option three
+D) Option four
+
+**Answer: B**
+
+---
+
+Use $...$ for any math. Leave blank lines between questions. Use --- between questions.`;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -64,24 +83,21 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
-            content: `You are an expert IB examiner. Generate authentic IB examination content that matches the style, rigor, and format of real IB papers. Use proper academic language and formatting.`,
+            content: `You are a senior IB examiner with 20 years of experience writing official IB examination papers. You write questions that are rigorous, clear, and perfectly formatted. You never use vague language. Every question tests specific skills from the IB syllabus. Your mathematical notation is always precise LaTeX.`,
           },
           {
             role: "user",
             content: `${modePrompt}
 
-Topics to focus on: ${topics.join(", ")}
+Subject: ${subject}
+Topics: ${topics.join(", ")}
 Difficulty: ${difficultyDesc}
 
-Important formatting rules:
-- Use $ for inline math and $$ for display math (LaTeX notation)
-- Use proper fraction notation like \\frac{a}{b}, not text fractions
-- Use [X marks] at the end of each question to show marks
-- Use ## for section headers and ### for sub-sections
-- For graphs use [GRAPH: description of what should be shown]`,
+Generate the paper now. Output ONLY the question content, no preamble or commentary.`,
           },
         ],
       }),
@@ -95,7 +111,7 @@ Important formatting rules:
         });
       }
       if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please check your plan." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
