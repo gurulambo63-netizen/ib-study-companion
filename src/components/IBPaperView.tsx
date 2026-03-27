@@ -120,7 +120,7 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
 
       <div
         ref={paperRef}
-        className="ib-paper-container bg-white dark:bg-zinc-950 border border-border rounded-xl max-w-[800px] mx-auto shadow-lg"
+        className="ib-paper-container bg-background border border-border rounded-xl max-w-[800px] mx-auto shadow-lg"
       >
         {/* Paper header */}
         {mode === "past-paper" ? (
