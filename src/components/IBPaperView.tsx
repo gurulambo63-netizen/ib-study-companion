@@ -126,7 +126,7 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
         {mode === "past-paper" ? (
           <div className="ib-paper-header-block">
             {/* Top band */}
-            <div className="bg-zinc-900 dark:bg-zinc-800 text-white px-10 py-6 rounded-t-xl">
+            <div className="bg-foreground text-background px-10 py-6 rounded-t-xl">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[10px] uppercase tracking-[0.4em] opacity-70 font-medium">International Baccalaureate Organization</span>
                 <span className="text-[10px] uppercase tracking-[0.3em] opacity-50">{session} {year}</span>
