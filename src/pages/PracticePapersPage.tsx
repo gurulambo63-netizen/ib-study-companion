@@ -7,7 +7,7 @@ import { FileText, Zap, ChevronLeft, Loader2 } from "lucide-react";
 import { IBPaperView } from "@/components/IBPaperView";
 import { toast } from "sonner";
 
-const GENERATE_PAPER_URL = "https://eqk9ganl--generate-paper.functions.blink.new";
+const GENERATE_PAPER_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-paper`;
 
 type Step = "subject" | "mode" | "topics" | "difficulty" | "generating" | "result";
 
