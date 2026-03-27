@@ -1,7 +1,9 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import type { PaperMode } from "@/lib/ib-data";
+
+const GENERATE_DIAGRAM_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-diagram`;
 
 interface IBPaperViewProps {
   content: string;
@@ -11,11 +13,60 @@ interface IBPaperViewProps {
 
 export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
   const paperRef = useRef<HTMLDivElement>(null);
-  const [renderReady, setRenderReady] = useState(false);
+  const [diagramImages, setDiagramImages] = useState<Record<string, string>>({});
+  const [loadingDiagrams, setLoadingDiagrams] = useState<Record<string, boolean>>({});
+
+  // Extract all diagram/graph placeholders from content
+  const extractDiagramDescriptions = useCallback((text: string) => {
+    const matches: { type: string; description: string; key: string }[] = [];
+    const regex = /\[(DIAGRAM|GRAPH):?\s*(.*?)\]/gi;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({
+        type: match[1],
+        description: match[2],
+        key: `${match[1]}-${match[2]}`.toLowerCase().replace(/\s+/g, "-"),
+      });
+    }
+    return matches;
+  }, []);
+
+  // Generate diagram images
+  useEffect(() => {
+    const diagrams = extractDiagramDescriptions(content);
+    if (diagrams.length === 0) return;
+
+    diagrams.forEach(async (diagram) => {
+      if (diagramImages[diagram.key] || loadingDiagrams[diagram.key]) return;
+      
+      setLoadingDiagrams((prev) => ({ ...prev, [diagram.key]: true }));
+      
+      try {
+        const res = await fetch(GENERATE_DIAGRAM_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: diagram.description,
+            type: diagram.type,
+          }),
+        });
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        if (data.imageUrl) {
+          setDiagramImages((prev) => ({ ...prev, [diagram.key]: data.imageUrl }));
+        }
+      } catch (err) {
+        console.error("Diagram generation error:", err);
+      } finally {
+        setLoadingDiagrams((prev) => ({ ...prev, [diagram.key]: false }));
+      }
+    });
+  }, [content, extractDiagramDescriptions]);
 
   useEffect(() => {
     if (!paperRef.current) return;
-    // Render KaTeX equations
     const renderKatex = async () => {
       try {
         const katex = await import("katex");
@@ -23,7 +74,6 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
         const el = paperRef.current;
         if (!el) return;
         const html = el.innerHTML;
-        // Replace $$...$$ (display) and $...$ (inline)
         let processed = html.replace(/\$\$(.*?)\$\$/g, (_match, tex) => {
           try {
             return katex.default.renderToString(tex, { displayMode: true, throwOnError: false });
@@ -35,14 +85,12 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
           } catch { return tex; }
         });
         el.innerHTML = processed;
-        setRenderReady(true);
       } catch (e) {
         console.error("KaTeX render error:", e);
-        setRenderReady(true);
       }
     };
     renderKatex();
-  }, [content]);
+  }, [content, diagramImages]);
 
   const handleDownloadPDF = async () => {
     if (!paperRef.current) return;
@@ -63,9 +111,12 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
     }
   };
 
+  const session = new Date().getMonth() < 6 ? "May" : "November";
   const year = new Date().getFullYear();
   const month = new Date().toLocaleString("en", { month: "long" });
-  const session = new Date().getMonth() < 6 ? "May" : "November";
+
+  // Build the formatted HTML with actual images injected
+  const formattedContent = formatPaperContent(content, diagramImages, loadingDiagrams);
 
   return (
     <div className="space-y-4">
@@ -112,15 +163,18 @@ export function IBPaperView({ content, subject, mode }: IBPaperViewProps) {
 
         <div
           className="prose prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: formatPaperContent(content) }}
+          dangerouslySetInnerHTML={{ __html: formattedContent }}
         />
       </div>
     </div>
   );
 }
 
-function formatPaperContent(content: string): string {
-  // Convert markdown-ish content to HTML
+function formatPaperContent(
+  content: string,
+  diagramImages: Record<string, string>,
+  loadingDiagrams: Record<string, boolean>
+): string {
   let html = content;
 
   // Sections
@@ -130,26 +184,51 @@ function formatPaperContent(content: string): string {
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  // Question numbers (1., 2. etc)
+  // Question numbers
   html = html.replace(/^(\d+)\.\s/gm, '<div class="mt-10 first:mt-4 group"><div class="flex items-baseline gap-4"><span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-black text-sm">$1</span><div class="flex-grow font-semibold text-lg">');
-  
-  // Close the question div if next line starts or end of string
-  // This is a bit tricky with simple regex, but let's try to wrap it better
-  
-  // Marks in brackets [X] or [X marks]
-  html = html.replace(/\[(\d+)\]/g, '<span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary ml-2 align-middle">[$1]</span>');
-  html = html.replace(/\[(\d+)\s*marks?\]/gi, '<span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary ml-2 align-middle">[$1]</span>');
 
-  // Sub-questions (a), (b)
+  // Marks
+  html = html.replace(/\[(\d+)\s*marks?\]/gi, '<span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary ml-2 align-middle">[$1]</span>');
+  html = html.replace(/\[(\d+)\]/g, (_match, num) => {
+    // Avoid replacing diagram keys that were already processed
+    if (parseInt(num) > 0 && parseInt(num) <= 50) {
+      return `<span class="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary ml-2 align-middle">[${num}]</span>`;
+    }
+    return _match;
+  });
+
+  // Sub-questions
   html = html.replace(/^\(([a-z])\)\s/gm, '</div></div><div class="ml-12 mt-6 flex items-baseline gap-3"><span class="flex-shrink-0 font-bold text-primary italic">($1)</span> <div class="flex-grow">');
-  
-  // Sub-sub-questions (i), (ii)
   html = html.replace(/^\(([ivx]+)\)\s/gm, '</div><div class="ml-12 mt-4 flex items-baseline gap-3"><span class="flex-shrink-0 font-medium text-muted-foreground">($1)</span> <div class="flex-grow text-sm">');
 
-  // Diagrams/Graph placeholders
-  html = html.replace(/\[(DIAGRAM|GRAPH):?\s*(.*?)\]/gi, '<div class="my-8 p-12 border-2 border-dashed border-primary/20 rounded-2xl text-center bg-primary/5 group-hover:bg-primary/10 transition-colors"><div class="flex flex-col items-center gap-3"><svg class="w-12 h-12 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p class="text-xs font-bold uppercase tracking-widest text-primary/60">$1: $2</p></div></div>');
+  // Replace DIAGRAM/GRAPH placeholders with actual images or loading spinners
+  html = html.replace(/\[(DIAGRAM|GRAPH):?\s*(.*?)\]/gi, (_match, type, desc) => {
+    const key = `${type}-${desc}`.toLowerCase().replace(/\s+/g, "-");
+    const imageUrl = diagramImages[key];
+    const isLoading = loadingDiagrams[key];
 
-  // Clean up line breaks
+    if (imageUrl) {
+      return `<div class="my-8 flex justify-center"><img src="${imageUrl}" alt="${desc}" class="max-w-full rounded-lg border border-border shadow-sm" style="max-height: 400px; object-fit: contain;" /></div>`;
+    }
+
+    if (isLoading) {
+      return `<div class="my-8 p-12 border-2 border-dashed border-primary/20 rounded-2xl text-center bg-primary/5 animate-pulse">
+        <div class="flex flex-col items-center gap-3">
+          <svg class="w-8 h-8 text-primary/40 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          <p class="text-xs font-medium text-primary/60">Generating ${type.toLowerCase()}…</p>
+        </div>
+      </div>`;
+    }
+
+    return `<div class="my-8 p-12 border-2 border-dashed border-primary/20 rounded-2xl text-center bg-primary/5">
+      <div class="flex flex-col items-center gap-3">
+        <svg class="w-12 h-12 text-primary/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <p class="text-xs font-bold uppercase tracking-widest text-primary/60">${type}: ${desc}</p>
+      </div>
+    </div>`;
+  });
+
+  // Line breaks
   html = html.replace(/\n\n/g, '</div><div class="mt-4">');
   html = html.replace(/\n/g, '<br/>');
 
