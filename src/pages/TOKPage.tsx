@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, Send, BookOpen } from "lucide-react";
 
-const GRADE_TOK_URL = "https://eqk9ganl--grade-tok-essay.functions.blink.new";
+const GRADE_TOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/grade-tok-essay`;
 
 const tokPrompts = [
   "To what extent is certainty attainable in the natural sciences?",
