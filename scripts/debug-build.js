@@ -1,33 +1,41 @@
-import { execSync } from "child_process";
-import { readFileSync } from "fs";
+const { execSync } = require("child_process");
+const { readFileSync } = require("fs");
+const path = require("path");
+
+// Script lives at <project>/scripts/debug-build.js → project root is one level up
+const PROJECT = path.resolve(__dirname, "..");
 
 console.log("=== CWD ===");
 console.log(process.cwd());
 
-console.log("\n=== package.json scripts ===");
-const pkg = JSON.parse(readFileSync("/vercel/share/v0-project/package.json", "utf8"));
-console.log(JSON.stringify(pkg.scripts, null, 2));
-console.log("type:", pkg.type);
-console.log("packageManager:", pkg.packageManager);
-
-console.log("\n=== Config files present ===");
-try { execSync("ls /vercel/share/v0-project/*.config.* /vercel/share/v0-project/*.config.js /vercel/share/v0-project/*.config.cjs /vercel/share/v0-project/*.config.ts 2>/dev/null", { stdio: "pipe" }); } catch {}
+console.log("\n=== Root files ===");
 try {
-  const files = execSync("ls /vercel/share/v0-project/ 2>&1", { encoding: "utf8" });
-  console.log(files);
-} catch (e) { console.log(e.message); }
+  console.log(execSync(`ls ${PROJECT}/`, { encoding: "utf8" }));
+} catch (e) {
+  console.log("ls failed:", e.message);
+}
 
-console.log("\n=== Running: npm run build ===");
+console.log("\n=== package.json ===");
 try {
-  const out = execSync("cd /vercel/share/v0-project && npm run build 2>&1", {
+  const pkg = JSON.parse(readFileSync(`${PROJECT}/package.json`, "utf8"));
+  console.log("name:", pkg.name);
+  console.log("type:", pkg.type);
+  console.log("packageManager:", pkg.packageManager);
+  console.log("scripts:", JSON.stringify(pkg.scripts, null, 2));
+} catch (e) {
+  console.log("Could not read package.json:", e.message);
+}
+
+console.log("\n=== Running npm run build ===");
+try {
+  const out = execSync(`cd ${PROJECT} && npm run build 2>&1`, {
     encoding: "utf8",
     timeout: 120000,
   });
   console.log("BUILD SUCCESS:");
   console.log(out);
 } catch (e) {
-  console.log("BUILD FAILED:");
-  console.log("stdout:", e.stdout || "");
-  console.log("stderr:", e.stderr || "");
-  console.log("message:", e.message || "");
+  console.log("BUILD FAILED (exit code:", e.status, ")");
+  console.log(e.stdout || "");
+  console.log(e.stderr || "");
 }
